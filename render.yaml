@@ -2,15 +2,17 @@ services:
   - type: web
     name: rekrutrek-ai
     runtime: python
-    plan: starter            # WAJIB minimal Starter — free tier RAM tidak cukup untuk TensorFlow
+    plan: free               # free tier (512MB RAM) — tanpa persistent disk
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
-      - key: CHROMA_PATH
-        value: /var/data/chroma_db
+      # Tanpa disk: model & chroma disimpan di filesystem lokal (ephemeral).
+      # Model di-download ulang tiap cold start (±30MB, beberapa detik).
       - key: MODEL_DIR
-        value: /var/data/saved_models
+        value: saved_models
+      - key: CHROMA_PATH
+        value: ./chroma_db
       # URL model di Supabase Storage — isi nilainya di Render Dashboard (jangan commit)
       - key: URL_JOB_EXTRACTOR
         sync: false
@@ -20,7 +22,3 @@ services:
         sync: false
       - key: URL_RES_VEC
         sync: false
-    disk:
-      name: ai-data
-      mountPath: /var/data       # model + chroma_db disimpan di sini (download sekali)
-      sizeGB: 1
