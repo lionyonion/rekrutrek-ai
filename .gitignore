@@ -1,0 +1,11 @@
+# Model files — di-host di Supabase Storage, di-download saat runtime
+saved_models/
+
+# Data ChromaDB (persisten, jangan di-commit)
+chroma_db/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
