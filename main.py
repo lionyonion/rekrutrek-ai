@@ -28,12 +28,19 @@ def ensure_models():
         path = os.path.join(MODEL_DIR, fname)
         if os.path.exists(path):
             continue
+        # Bersihkan spasi/newline yang ikut ter-paste di Environment Variable
+        url = (url or "").strip()
         if not url:
             print(f"⚠️  {fname} tidak ada & URL belum diset (env). Lewati.")
             continue
-        print(f"⬇️  Mengunduh {fname} ...")
-        urllib.request.urlretrieve(url, path)
-        print(f"✅ {fname} selesai diunduh.")
+        print(f"⬇️  Mengunduh {fname} dari: {url}")
+        try:
+            urllib.request.urlretrieve(url, path)
+            print(f"✅ {fname} selesai diunduh.")
+        except Exception as e:
+            # Jangan crash seluruh container kalau 1 file gagal —
+            # biar service tetap boot & /health bisa lapor model_ready=false
+            print(f"❌ GAGAL mengunduh {fname} dari '{url}': {e}")
 
 ensure_models()
 
