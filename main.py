@@ -62,22 +62,34 @@ col_jobs = chroma_client.get_or_create_collection(name="jobs", metadata={"hnsw:s
 # 2. MUAT MODEL TWO-TOWER TENSORFLOW & VECTORIZER
 # =====================================================================
 print("Memuat Model AI dan Vocabulary...")
+
+def load_vectorizer(pkl_path, seq_len):
+    """File .pkl berisi DAFTAR KOSAKATA (hasil get_vocabulary()), bukan config+weights.
+    Kita bangun ulang TextVectorization dari vocab tsb. output_sequence_length harus
+    sama dengan panjang input model ekstraktor (job=200, candidate=500)."""
+    with open(pkl_path, "rb") as f:
+        vocab = pickle.load(f)
+    # numpy str_ -> str standar
+    vocab = [str(t) for t in vocab]
+    vec = tf.keras.layers.TextVectorization(
+        max_tokens=len(vocab),
+        output_mode="int",
+        output_sequence_length=seq_len,
+    )
+    # get_vocabulary() menyertakan '' (mask, idx 0) & '[UNK]' (OOV, idx 1).
+    # set_vocabulary() menambah keduanya otomatis, jadi dua token itu dibuang.
+    vec.set_vocabulary(vocab[2:])
+    return vec
+
 try:
     # Muat Model Ekstraktor
     job_extractor = tf.keras.models.load_model(os.path.join(MODEL_DIR, "job_extractor.keras"))
     candidate_extractor = tf.keras.models.load_model(os.path.join(MODEL_DIR, "candidate_extractor.keras"))
 
-    # Muat TextVectorization (Pickle)
-    with open(os.path.join(MODEL_DIR, "job_vectorizer.pkl"), "rb") as f:
-        job_v_data = pickle.load(f)
-        job_vectorizer = tf.keras.layers.TextVectorization.from_config(job_v_data['config'])
-        job_vectorizer.set_weights(job_v_data['weights'])
+    # Bangun ulang TextVectorization dari daftar kosakata (.pkl)
+    job_vectorizer = load_vectorizer(os.path.join(MODEL_DIR, "job_vectorizer.pkl"), 200)
+    resume_vectorizer = load_vectorizer(os.path.join(MODEL_DIR, "resume_vectorizer.pkl"), 500)
 
-    with open(os.path.join(MODEL_DIR, "resume_vectorizer.pkl"), "rb") as f:
-        res_v_data = pickle.load(f)
-        resume_vectorizer = tf.keras.layers.TextVectorization.from_config(res_v_data['config'])
-        resume_vectorizer.set_weights(res_v_data['weights'])
-    
     print("Model AI Siap Digunakan!")
     MODEL_READY = True
 except Exception as e:
